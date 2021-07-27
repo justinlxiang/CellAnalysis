@@ -10,7 +10,7 @@ from tqdm import tqdm
 from sklearn.preprocessing import StandardScaler
 import math
 #import snf
-# GIT Hub Commitss
+# GIT Hub Commits
 #from snf import compute
 #import seaborn as sns
 #import scipy.cluster.hierarchy as hc
