@@ -530,9 +530,9 @@ labels_hc_High = shc.fcluster(Z = linkage, # input linkage
 
 #%% Plot with HC clusters
 
-unique_labels, lanel_cnts = np.unique(labels_hc_High, return_counts=True)
+unique_labels, lanel_cnts = np.unique(labels_spectral, return_counts=True)
 for l in unique_labels:  
-    plt.scatter(X_display_UMAP[labels_hc_High == l, 0], X_display_UMAP[labels_hc_High == l, 1], 
+    plt.scatter(X_display_UMAP[labels_spectral == l, 0], X_display_UMAP[labels_spectral == l, 1], 
                 s=.5, # marker size
                 alpha=0.5, # transparency
                 label='Cluster %s' % l, # label
@@ -587,13 +587,13 @@ df.to_csv(f'{save_path}/Result_clustering_{cluster_name}.csv')
 
 #%% Superrvised Learing to Calculate Feature Importance
 
-labels_hc_Mid = pd.DataFrame(labels_hc_Mid)
-labels_hc_Mid.columns = ['HC_Clusters']
+labels_spectral = pd.DataFrame(labels_spectral)
+labels_spectral.columns = ['HC_Clusters']
 
 all_data.reset_index(drop=True, inplace=True)
-labels_hc_Mid.reset_index(drop=True, inplace=True)
+labels_spectral.reset_index(drop=True, inplace=True)
 
-all_data_with_clust = pd.concat([all_data, labels_hc_Mid], axis = 1) 
+all_data_with_clust = pd.concat([all_data, labels_spectral], axis = 1) 
 
 feature_used = all_data_with_clust.drop(columns = ['hemo-nucleus_X', 'hemo-nucleus_Y',
                                                    'hemo-nucleus_XM', 'hemo-nucleus_YM', 
