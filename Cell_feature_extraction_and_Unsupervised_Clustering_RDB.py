@@ -414,7 +414,7 @@ from sklearn.decomposition import PCA
 #import seaborn as sns
 from sklearn.impute import SimpleImputer
 #from sklearn.manifold import TSNE
-
+from sklearn.cluster import SpectralClustering
 
 
 #%% PCA and PCs Picked
@@ -505,6 +505,10 @@ den_plt = shc.dendrogram(linkage, orientation='top', truncate_mode='level', p = 
 plt.show()
 
 
+spectral = SpectralClustering(n_clusters = 8).fit(X_pcs_picked)
+labels_spectral = spectral.labels_
+
+
 #%%#%% Cut dendrogram
 
 labels_hc_Low = shc.fcluster(Z = linkage, # input linkage
@@ -539,6 +543,15 @@ plt.ylabel('UMAP_1')
 plt.show()
 
 #%% Output
+
+cluster_name = 'Spectral'
+
+d = {'Name':all_data['hemo-nucleus_Name'],'Cluster_Labels':labels_spectral}
+
+df = pd.DataFrame(d)
+df.to_csv(f'{save_path}/Result_clustering_{cluster_name}.csv')
+
+
 
 cluster_name = 'Low'
 
@@ -591,7 +604,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn import metrics 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
-
 
 
 
