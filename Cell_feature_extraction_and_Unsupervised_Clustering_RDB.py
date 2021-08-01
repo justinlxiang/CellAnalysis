@@ -31,7 +31,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 #%% Paths
 results_root = '/Users/juxiang/Documents/Work/CellAnalysis/XLS/'
-images_path = '/Users/juxiang/Documents/Work/CellAnalysis/oneImage/'
+images_path = '/Users/juxiang/Documents/Work/CellAnalysis/Images/'
 save_path = '/Users/juxiang/Documents/Work/CellAnalysis/Clusters/'
 
 #%% Hyperparameters and Empty Lists
@@ -40,7 +40,7 @@ img_names = [k[:-4] for k in img_names]
 scan_data = []
 df_roi_list = []
 
-nuclei_distance_measures = [150] #, 300, 450]
+nuclei_distance_measures = [150, 300, 450]
 
 
 #%% Functions
@@ -505,11 +505,13 @@ den_plt = shc.dendrogram(linkage, orientation='top', truncate_mode='level', p = 
 plt.show()
 
 
-spectral = SpectralClustering(n_clusters = 8).fit(X_pcs_picked)
-labels_spectral = spectral.labels_
 
 
 #%%#%% Cut dendrogram
+
+spectral = SpectralClustering(n_clusters = 8, affinity = 'nearest_neighbors').fit(X_pcs_picked)
+labels_spectral = spectral.labels_
+
 
 labels_hc_Low = shc.fcluster(Z = linkage, # input linkage
                          t = 6, # cluster number
@@ -529,6 +531,19 @@ labels_hc_High = shc.fcluster(Z = linkage, # input linkage
 
 
 #%% Plot with HC clusters
+
+unique_labels, lanel_cnts = np.unique(labels_hc_Mid, return_counts=True)
+for l in unique_labels:  
+    plt.scatter(X_display_UMAP[labels_hc_Mid == l, 0], X_display_UMAP[labels_hc_Mid == l, 1], 
+                s=.5, # marker size
+                alpha=0.5, # transparency
+                label='Cluster %s' % l, # label
+                )
+plt.legend(bbox_to_anchor=(1,1), loc="upper left", markerscale = 20)
+plt.xlabel('UMAP_0')
+plt.ylabel('UMAP_1')
+plt.show()
+
 
 unique_labels, lanel_cnts = np.unique(labels_spectral, return_counts=True)
 for l in unique_labels:  
