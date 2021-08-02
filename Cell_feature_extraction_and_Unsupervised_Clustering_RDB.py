@@ -509,7 +509,7 @@ plt.show()
 
 #%%#%% Cut dendrogram
 
-spectral = SpectralClustering(n_clusters = 8, affinity = 'nearest_neighbors').fit(X_pcs_picked)
+spectral = SpectralClustering(n_clusters = 10, affinity = 'nearest_neighbors').fit(X_pcs_picked)
 labels_spectral = spectral.labels_
 
 

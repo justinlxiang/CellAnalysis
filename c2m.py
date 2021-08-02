@@ -13,7 +13,7 @@ import read_roi
 
 #%%
 
-image_loc = '/Users/juxiang/Documents/Work/CellAnalysis/oneImage/'
+image_loc = '/Users/juxiang/Documents/Work/CellAnalysis/Images/'
 
 
 file_names = os.listdir(image_loc)
@@ -34,10 +34,10 @@ for file_name in file_names:
 
     img = cv2.imread(img_fname,cv2.IMREAD_COLOR)
 
-    clust_names =['Together_High', 'Together_Low', 'Together_Mid', 'coarsest', 'coarse', 'finest']#, 'coarse', 'fine', 'finer','finest']
+    clust_names =['High', 'Low', 'Mid', 'Spectral']#, 'coarse', 'fine', 'finer','finest']
 
     for q in clust_names:
-        clust = pd.read_csv(f'/Users/juxiang/Documents/Work/CellAnalysis/XLS/Result_clustering_{q}.csv', index_col = 0, header = 0)
+        clust = pd.read_csv(f'/Users/juxiang/Documents/Work/CellAnalysis/Clusters/Result_clustering_{q}.csv', index_col = 0, header = 0)
         clust['NameShort'] = ["_".join(k.split('_')[:2]) for k in clust.Name]
         #print(clust.NameShort.values[0], file_name)
         #print(clust.head())
@@ -46,7 +46,7 @@ for file_name in file_names:
         #print(clust)
         
 
-        data = pd.read_csv(f'/Users/juxiang/Documents/Work/CellAnalysis/XLS/{file_name}HT_nucleus.xls', sep="\t", header = 0 , index_col = 0)
+        data = pd.read_csv(f'/Users/juxiang/Documents/Work/CellAnalysis/XLS/{file_name}HT_hemo-nucleus.xls', sep="\t", header = 0 , index_col = 0)
 
         def getList(dict):
             
@@ -77,12 +77,13 @@ for file_name in file_names:
 
             idx_file = clust.loc[clust['Name'] == j]
             #print(idx_file)
-            assert(len(idx_file) == 1)
+            if(len(idx_file) == 0):
+                continue
 
             #print(color_list[clust.iloc[int(getList(roi2)[0]),1]])
             #print(np.array(np.array(value['contour'])),  color_list[clust.iloc[counter,1]] )
             #roi2 = roifile.ImagejRoi.fromfile(sh_fname_roi+j)
-            cv2.drawContours(img, np.array([roi2['coordinates']]), -1, color_list[int(idx_file.Cluster_Label.values)],3 )
+            cv2.drawContours(img, np.array([roi2['coordinates']]), -1, color_list[int(idx_file.Cluster_Labels.values)],3 )
             font = cv2.FONT_HERSHEY_SIMPLEX
 
             data_file = data.loc[data['Name'] == j]
@@ -94,9 +95,9 @@ for file_name in file_names:
             #print(name_roi[:-4])
             #print((int(data_file.XM.values[0]),int(data_file.YM.values[0])))
             #print(idx_file.Category.values[0])
-            cv2.putText(img,str(name_roi[:-4]),(int(data_file.XM.values[0]),int(data_file.YM.values[0])), font, 0.3,  color_list[int(idx_file.Cluster_Label.values)], 1 ,cv2.LINE_AA)
+            cv2.putText(img,str(name_roi[:-4]),(int(data_file.XM.values[0]),int(data_file.YM.values[0])), font, 0.3,  color_list[int(idx_file.Cluster_Labels.values)], 1 ,cv2.LINE_AA)
 
 
 
 
-        cv2.imwrite(f'/Users/juxiang/Documents/Work/CellAnalysis/XLS/{file_name}_{q}_overlay.jpg', img)
+        cv2.imwrite(f'/Users/juxiang/Documents/Work/CellAnalysis/Clusters/{file_name}_{q}_overlay.jpg', img)
