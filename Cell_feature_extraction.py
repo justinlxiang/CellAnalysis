@@ -25,6 +25,8 @@ from tqdm import tqdm
 from netneurotools import cluster
 from sklearn.linear_model import LinearRegression
 from sklearn.utils import resample
+from sklearn.preprocessing import StandardScaler
+from sklearn import cluster, mixture, preprocessing
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
@@ -209,6 +211,56 @@ for unique_scan in unique_scan_names:
                                                     'hemo-nucleus_YM', 'hemo-nucleus_Name'])
     col_names = slide_date_no_loc.columns
     
+    num_total_cells = nuc_loc.shape[0]
+    
+    clusts_divisor = 20
+    clust_sizes = []
+    
+    clusts = int(num_total_cells/clusts_divisor)
+    
+    while clusts > 10 :
+        clust_sizes.append(clusts)
+        clusts_divisor = clusts_divisor * 3
+        clusts = int(num_total_cells/clusts_divisor)
+
+    nuc_loc_values = nuc_loc.values   
+    standerd_scaler = preprocessing.StandardScaler()
+    nuc_loc_values = standerd_scaler.fit_transform(nuc_loc_values)       
+
+    for idx2, n_clust in enumerate(clust_sizes):
+        spectral = cluster.SpectralClustering(n_clusters = n_clust, eigen_solver = 'arpack',
+                                              affinity = "nearest_neighbors")
+        if idx2 == 0:
+            spectral_labels =spectral.fit(nuc_loc_values).labels_                                                
+            spectral_labels =  pd.DataFrame(spectral_labels.reshape([len(spectral_labels), 1]),
+                                                                    columns= [f'spectral_{n_clust}_clusters'])
+            print(f'spectral_{n_clust}_clusters')
+        else:
+            spect_temp = spectral.fit(nuc_loc_values).labels_
+            spect_temp = pd.DataFrame(spect_temp.reshape([len(spect_temp),1]),
+                                      columns= [f'spectral_{n_clust}_clusters'])
+            spectral_labels = pd.concat([spectral_labels, spect_temp], axis = 1)
+            print(f'spectral_{n_clust}_clusters')
+
+
+    for idx2, n_clust in enumerate(clust_sizes):
+        gmm = mixture.GaussianMixture(n_components= n_clust , covariance_type='full')
+        if idx2 == 0:
+            gmm_fit = gmm.fit(nuc_loc_values)
+            gmm_labels = gmm_fit.predict(nuc_loc_values)
+            gmm_labels = pd.DataFrame(gmm_labels.reshape([len(gmm_labels),1]),
+                                      columns = [f'gmm_{n_clust}_clusters'])
+            print(f'gmm_{n_clust}_clusters')
+        else:
+            gmm_temp_fit = gmm.fit(nuc_loc_values)
+            gmm_temp_labels = gmm_temp_fit.predict(nuc_loc_values)
+            gmm_temp_labels = pd.DataFrame(gmm_temp_labels.reshape([len(gmm_temp_labels),1]), 
+                                           columns = [f'gmm_{n_clust}_clusters'])
+            gmm_labels = pd.concat([gmm_labels, gmm_temp_labels], axis = 1)
+            print(f'gmm_{n_clust}_clusters')
+
+
+    
 
     tree = KDTree(img_nuc_loc)
 
@@ -390,7 +442,7 @@ for unique_scan in unique_scan_names:
     new_data_final.reset_index(drop=True, inplace=True)
     slide_data.reset_index(drop=True, inplace=True)
     
-    new_data_final = pd.concat([new_data_final, nuc_degree], axis = 1)
+    new_data_final = pd.concat([new_data_final, nuc_degree, spectral_labels, gmm_labels], axis = 1)
     slide_data = pd.concat([slide_data, new_data_final], axis = 1)
     
     if unique_scan == unique_scan_names[0]:
