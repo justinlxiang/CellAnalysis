@@ -10,9 +10,8 @@ import roifile
 from tqdm import tqdm
 
 # Location of the original images to get names
-file_names = os.listdir('/Users/juxiang/Documents/Work/CellAnalysis/ROIs/json')
+file_names = os.listdir('/Users/juxiang/Documents/Work/CellAnalysis/ROIs/json/')
 file_names = [k[:-5] for k in file_names]
-
 
 for file_name in file_names:
     path = '/Users/juxiang/Documents/Work/CellAnalysis/ROIs'
