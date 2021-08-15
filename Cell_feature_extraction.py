@@ -27,6 +27,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.utils import resample
 from sklearn.preprocessing import StandardScaler
 from sklearn import cluster, mixture, preprocessing
+from PIL import Image
+from libtiff import TIFF
+from skimage import io
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning) 
 
@@ -40,8 +43,9 @@ img_names = os.listdir(images_path)
 img_names = [k[:-4] for k in img_names]
 scan_data = []
 df_roi_list = []
+maskNum = np.empty((0,1))
 
-nuclei_distance_measures = [150, 300, 450]
+nuclei_distance_measures = [150, 300]# 450]
 
 
 #%% Functions
@@ -70,10 +74,11 @@ def density_degree(dist_matix):
 def unique_image_names(file_names_list, parser = '_', parse_index = 1):
     unique_names = []
     for files in file_names_list:
-        name_split = files.split(parser)
+        unique_names.append(files)
+        '''name_split = files.split(parser)
         second_split = name_split[1].split('.')
         if second_split[0] not in unique_names:
-            unique_names.append(second_split[0])
+            unique_names.append(second_split[0])'''
     return unique_names
     
 
@@ -86,25 +91,23 @@ for unique_scan in unique_scan_names:
     print('Slide Name:' + unique_scan)
 
     for img in img_names:
-        img_name_split = img.split('_')
-        img_name_split = img_name_split[1].split('.') 
-        if img_name_split[0] == unique_scan:
+        if img == unique_scan:
 
             excel_names = ['hemo-nucleus', 'eosin-nucleus', 'hemo-cyto', 'eosin-cyto']
             
             # only works for specific QuPath Names
-            values = img_name_split[1].split('(')
+            values = img.split('[')
             nums = values[1]
-            nums = nums[1:-1]
+            nums = nums[0:-1]
             offsets = nums.split(',')
-            x_offset = offsets[1].split('=')
+            x_offset = offsets[0].split('=')
             x_offset = int(x_offset[1])
-            y_offset = offsets[2].split('=')
+            y_offset = offsets[1].split('=')
             y_offset = int(y_offset[1])
             
-            w = offsets[3].split('=')
+            w = offsets[2].split('=')
             w = int(w[1])
-            h = offsets[4].split('=')
+            h = offsets[3].split('=')
             h = int(h[1])
             img_Y = h
             img_X = w
@@ -138,7 +141,7 @@ for unique_scan in unique_scan_names:
                     img_data = img_data.add_prefix(f'{xl}_')
                     
                 else:
-                    temp = pd.read_csv(f'{results_root}/{img}HT_{xl}.xls', sep="\t", header = 0 , index_col = 0)
+                    temp = pd.read_csv(f'{results_root}/{img}_{xl}.xls', sep="\t", header = 0 , index_col = 0)
                     # temp = temp.drop(columns = ['Area', 'Mean', 'StdDev',
                     #                             'Mode', 'Min', 'Max',
                     #                             'X', 'Y', 'XM', 'YM',
@@ -204,62 +207,12 @@ for unique_scan in unique_scan_names:
     
     
     
-# Start Computation loop
+#%% Start Computation loop
 
     nuc_loc = slide_data[['hemo-nucleus_X', 'hemo-nucleus_Y']]
     slide_date_no_loc = slide_data.drop(columns = ['hemo-nucleus_X', 'hemo-nucleus_Y', 'hemo-nucleus_XM',
                                                     'hemo-nucleus_YM', 'hemo-nucleus_Name'])
     col_names = slide_date_no_loc.columns
-    
-    num_total_cells = nuc_loc.shape[0]
-    
-    clusts_divisor = 20
-    clust_sizes = []
-    
-    clusts = int(num_total_cells/clusts_divisor)
-    
-    while clusts > 10 :
-        clust_sizes.append(clusts)
-        clusts_divisor = clusts_divisor * 3
-        clusts = int(num_total_cells/clusts_divisor)
-
-    nuc_loc_values = nuc_loc.values   
-    standerd_scaler = preprocessing.StandardScaler()
-    nuc_loc_values = standerd_scaler.fit_transform(nuc_loc_values)       
-
-    for idx2, n_clust in enumerate(clust_sizes):
-        spectral = cluster.SpectralClustering(n_clusters = n_clust, eigen_solver = 'arpack',
-                                              affinity = "nearest_neighbors")
-        if idx2 == 0:
-            spectral_labels =spectral.fit(nuc_loc_values).labels_                                                
-            spectral_labels =  pd.DataFrame(spectral_labels.reshape([len(spectral_labels), 1]),
-                                                                    columns= [f'spectral_{n_clust}_clusters'])
-            print(f'spectral_{n_clust}_clusters')
-        else:
-            spect_temp = spectral.fit(nuc_loc_values).labels_
-            spect_temp = pd.DataFrame(spect_temp.reshape([len(spect_temp),1]),
-                                      columns= [f'spectral_{n_clust}_clusters'])
-            spectral_labels = pd.concat([spectral_labels, spect_temp], axis = 1)
-            print(f'spectral_{n_clust}_clusters')
-
-
-    for idx2, n_clust in enumerate(clust_sizes):
-        gmm = mixture.GaussianMixture(n_components= n_clust , covariance_type='full')
-        if idx2 == 0:
-            gmm_fit = gmm.fit(nuc_loc_values)
-            gmm_labels = gmm_fit.predict(nuc_loc_values)
-            gmm_labels = pd.DataFrame(gmm_labels.reshape([len(gmm_labels),1]),
-                                      columns = [f'gmm_{n_clust}_clusters'])
-            print(f'gmm_{n_clust}_clusters')
-        else:
-            gmm_temp_fit = gmm.fit(nuc_loc_values)
-            gmm_temp_labels = gmm_temp_fit.predict(nuc_loc_values)
-            gmm_temp_labels = pd.DataFrame(gmm_temp_labels.reshape([len(gmm_temp_labels),1]), 
-                                           columns = [f'gmm_{n_clust}_clusters'])
-            gmm_labels = pd.concat([gmm_labels, gmm_temp_labels], axis = 1)
-            print(f'gmm_{n_clust}_clusters')
-
-
     
 
     tree = KDTree(img_nuc_loc)
@@ -270,7 +223,8 @@ for unique_scan in unique_scan_names:
     dist_matrix = find_close_cells_parent.copy()
     
     find_close_cells = find_close_cells_parent.copy()
-    
+
+
     #For distance hyper paramerter    
     for idx, nuclei_dist in enumerate(nuclei_distance_measures):
         
@@ -434,15 +388,39 @@ for unique_scan in unique_scan_names:
             new_data_final = pd.concat([new_data_final, new_data], axis = 1)            
 
 
+#%%
+    file = f'{unique_scan}-labelled.tif'
+    im = io.imread(f'/Users/juxiang/Documents/Work/CellAnalysis/Masks/{file}')
+    nans =0
+    
+    nuc_loc = slide_data[['hemo-nucleus_X', 'hemo-nucleus_Y']]
+    for index, row in nuc_loc.iterrows():
+        xcor = row['hemo-nucleus_X']
+        ycor = row['hemo-nucleus_Y']
+        found = False
+        for mask in range(12):
+             if im[mask][round(ycor)-y_offset][round(xcor)-x_offset] == 255:
+                 maskNum = np.append(maskNum, [[mask]], axis=0)
+                 found = True
+                 break
+        if not found:
+            maskNum = np.append(maskNum, [[0]], axis=0)
+            nans += 1
+    
+
+    
+#%%   
+
     #Calculate density degree with above function
     
     nuc_loc_dist_degree = density_degree(dist_matrix)
     nuc_degree = pd.DataFrame(np.sum(nuc_loc_dist_degree, axis = 1), columns = ['Degree'])
-
+    maskNum = pd.DataFrame(maskNum, columns = ['TissueMask'])
+    
     new_data_final.reset_index(drop=True, inplace=True)
     slide_data.reset_index(drop=True, inplace=True)
     
-    new_data_final = pd.concat([new_data_final, nuc_degree, spectral_labels, gmm_labels], axis = 1)
+    new_data_final = pd.concat([new_data_final, nuc_degree, maskNum], axis = 1)
     slide_data = pd.concat([slide_data, new_data_final], axis = 1)
     
     if unique_scan == unique_scan_names[0]:
@@ -458,7 +436,120 @@ for unique_scan in unique_scan_names:
     
 save_name = '_'.join(str(e) for e in nuclei_distance_measures)
 
-all_data.to_csv(f'{save_path}/AllData.csv')
+
+#%%
+data_path = '/Users/juxiang/Documents/Work/CellAnalysis/Data/'
+
+all_data.to_csv(f'{data_path}/AllData.csv')
+
+HeNuc = []
+EoNuc = []
+HeCyto = []
+EoCyto = []
+Shape = []
+
+d1HN = []
+d1EN = []
+d1HC = []
+d1EC = []
+d1Shape = []
+d1Density = []
+
+d2HN = []
+d2EN = []
+d2HC = []
+d2EC = []
+d2Shape = []
+d2Density = []
+
+for ind, column in enumerate(all_data.columns):
+    if "Area" in column or "Perim" in column or "Circ" in column or "Feret" in column or "Solidity" in column or "Round" in column:
+        if "150" in column:
+            d1Shape.append(ind)
+        elif "300" in column:
+            d2Shape.append(ind)
+        else: 
+            Shape.append(ind)
+
+
+    if "r_squared" in column or "spatial" in column or "Degree" in column:
+        if "150" in column:
+            d1Density.append(ind)
+        elif "300" in column:
+            d2Density.append(ind)
+
+    else:
+        if "150" in column:
+            if "hemo-nucleus" in column:
+                d1HN.append(ind)
+            elif "eosin-nucleus" in column:
+                d1EN.append(ind)
+            elif "hemo-cyto" in column:
+                d1HC.append(ind)
+            elif "eosin-cyto" in column:
+                d1EC.append(ind)
+        elif "300" in column:
+            if "hemo-nucleus" in column:
+                d2HN.append(ind)
+            elif "eosin-nucleus" in column:
+                d2EN.append(ind)
+            elif "hemo-cyto" in column:
+                d2HC.append(ind)
+            elif "eosin-cyto" in column:
+                d2EC.append(ind)
+        else:
+            if "hemo-nucleus" in column:
+                HeNuc.append(ind)
+            elif "eosin-nucleus" in column:
+                EoNuc.append(ind)
+            elif "hemo-cyto" in column:
+                HeCyto.append(ind)
+            elif "eosin-cyto" in column:
+                EoCyto.append(ind)
+
+HemoNuc = all_data[all_data.columns[HeNuc]]
+EosinHuc = all_data[all_data.columns[EoNuc]]
+HemoCyto = all_data[all_data.columns[HeCyto]]
+EosinCyto = all_data[all_data.columns[EoCyto]]
+Shape =  all_data[all_data.columns[Shape]]
+
+D1HemoNuc = all_data[all_data.columns[d1HN]]
+D1EosinNuc = all_data[all_data.columns[d1EN]]
+D1HemoCyto = all_data[all_data.columns[d1HC]]
+D1EeosinCyto = all_data[all_data.columns[d1EC]]
+D1Shape = all_data[all_data.columns[d1Shape]]
+D1Density = all_data[all_data.columns[d1Density]]
+
+D2HemoNuc = all_data[all_data.columns[d2HN]]
+D2EosinNuc = all_data[all_data.columns[d2EN]]
+D2HemoCyto = all_data[all_data.columns[d2HC]]
+D2EeosinCyto = all_data[all_data.columns[d2EC]]
+D2Shape = all_data[all_data.columns[d2Shape]]
+D2Density = all_data[all_data.columns[d2Density]]
+
+
+
+HemoNuc.to_csv(f'{data_path}/HemoNuc.csv')
+EosinHuc.to_csv(f'{data_path}/EosinHuc.csv')
+HemoCyto.to_csv(f'{data_path}/HemoCyto.csv')
+EosinCyto.to_csv(f'{data_path}/EosinCyto.csv')
+Shape.to_csv(f'{data_path}/Shape.csv')
+
+D1HemoNuc.to_csv(f'{data_path}/D1HemoNuc.csv')
+D1EosinNuc.to_csv(f'{data_path}/D1EosinNuc.csv')
+D1HemoCyto.to_csv(f'{data_path}/D1HemoCyto.csv')
+D1EeosinCyto.to_csv(f'{data_path}/D1EeosinCyto.csv')
+D1Shape.to_csv(f'{data_path}/D1Shape.csv')
+D1Density.to_csv(f'{data_path}/D1Density.csv')
+
+D2HemoNuc.to_csv(f'{data_path}/D2HemoNuc.csv')
+D2EosinNuc.to_csv(f'{data_path}/D2EosinNuc.csv')
+D2HemoCyto.to_csv(f'{data_path}/D2HemoCyto.csv')
+D2EeosinCyto.to_csv(f'{data_path}/D2EeosinCyto.csv')
+D2Shape.to_csv(f'{data_path}/D2Shape.csv')
+D2Density.to_csv(f'{data_path}/D2Density.csv')
+
+
 
 t1 = time.time()
 
@@ -466,3 +557,5 @@ total_t = t1 - t0
 
 
 
+
+# %%

@@ -56,15 +56,24 @@ from sklearn.cluster import SpectralClustering
 results_root = '/Users/juxiang/Documents/Work/CellAnalysis/XLS/'
 images_path = '/Users/juxiang/Documents/Work/CellAnalysis/Images/'
 save_path = '/Users/juxiang/Documents/Work/CellAnalysis/Clusters/'
+data_path = '/Users/juxiang/Documents/Work/CellAnalysis/Data/'
 
 
-all_data = pd.read_csv(f'{save_path}/AllData.csv', index_col = 0)#, sep="\t", header = 0 , index_col = 0)
+all_data = pd.read_csv(f'{data_path}/AllData.csv', index_col = 0)#, sep="\t", header = 0 , index_col = 0)
 all_data_trimed = all_data.drop(columns = ['hemo-nucleus_X', 'hemo-nucleus_Y', 'hemo-nucleus_XM', 'hemo-nucleus_YM', 'hemo-nucleus_Name'])
 
 X = all_data_trimed.values
 
+fmax = np.finfo(np.float64).max
+pinf = float('+inf')
+ninf = float('-inf')
+
+X[X >= fmax] = 0
+X[X >= pinf] = 0
+X[X <= ninf] = 0
+
 imputer = SimpleImputer(missing_values=np.nan,
-                        strategy='constant', fill_value = 0)
+                        strategy='mean')#, fill_value = mean)
 imputer.fit(X)
 
 X = imputer.transform(X)
